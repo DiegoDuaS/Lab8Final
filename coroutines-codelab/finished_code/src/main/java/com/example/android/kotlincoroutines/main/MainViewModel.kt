@@ -99,11 +99,14 @@ class MainViewModel(private val repository: TitleRepository) : ViewModel() {
         updateTaps()
     }
 
+    /**
+     * Wait one second then update the tap count.
+     */
     private fun updateTaps() {
-        viewModelScope.launch {
-            delay(1_000)
-            _taps.value = "${++tapCount} taps"
-        }
+        // TODO: Convert updateTaps to use coroutines
+        tapCount++
+        Thread.sleep(1_000)
+        _taps.postValue("$tapCount taps")
     }
 
     /**
@@ -113,11 +116,21 @@ class MainViewModel(private val repository: TitleRepository) : ViewModel() {
         _snackBar.value = null
     }
 
+
     /**
      * Refresh the title, showing a loading spinner while it refreshes and errors via snackbar.
      */
-    fun refreshTitle() = launchDataLoad {
-        repository.refreshTitle()
+    fun refreshTitle() {
+        viewModelScope.launch {
+            try {
+                _spinner.value = true
+                repository.refreshTitle()
+            } catch (error: TitleRefreshError) {
+                _snackBar.value = error.message
+            } finally {
+                _spinner.value = false
+            }
+        }
     }
 
     /**
@@ -143,4 +156,5 @@ class MainViewModel(private val repository: TitleRepository) : ViewModel() {
             }
         }
     }
+
 }
